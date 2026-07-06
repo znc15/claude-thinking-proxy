@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  cleanAnthropicResponse,
+  cleanTaggedAnswerText,
   detectLanguage,
   enhanceAnthropicRequest,
   parseThinkingFromAnthropicResponse,
@@ -83,6 +85,17 @@ test('parser extracts thinking and answer blocks', () => {
     { type: 'thinking', thinking: 'work' },
     { type: 'text', text: 'four' },
   ]);
+});
+
+test('answer tags are removed from plain text responses', () => {
+  assert.equal(cleanTaggedAnswerText('<answer>four</answer>'), 'four');
+  assert.equal(cleanTaggedAnswerText('<thinking>work</thinking><answer>four</answer>'), 'four');
+
+  const cleaned = cleanAnthropicResponse({
+    content: [{ type: 'text', text: '<thinking>work</thinking><answer>four</answer>' }],
+  });
+
+  assert.deepEqual(cleaned.content, [{ type: 'text', text: 'four' }]);
 });
 
 test('parser creates fallback thinking when only answer exists', () => {

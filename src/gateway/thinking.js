@@ -161,6 +161,30 @@ export function stripThinkingTags(text) {
   return String(text || '').replace(/<\/?(?:thinking|answer)>/g, '').trim();
 }
 
+export function cleanTaggedAnswerText(text) {
+  const value = String(text || '');
+  const answerMatch = value.match(/<answer>([\s\S]*?)<\/answer>/);
+  if (answerMatch) return stripThinkingTags(answerMatch[1]);
+
+  return value
+    .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+    .replace(/<\/?(?:thinking|answer)>/g, '')
+    .trim();
+}
+
+export function cleanAnthropicResponse(responseData) {
+  if (!Array.isArray(responseData?.content)) return responseData;
+
+  return {
+    ...responseData,
+    content: responseData.content.map((block) => (
+      block.type === 'text'
+        ? { ...block, text: cleanTaggedAnswerText(block.text) || block.text }
+        : block
+    )),
+  };
+}
+
 function textFromLastUser(originalRequest) {
   return lastUserText(Array.isArray(originalRequest?.messages) ? originalRequest.messages : [])
     .replace(/\[记住：.*?\]/gs, '')
@@ -193,7 +217,7 @@ function parseTextBlock(text, originalRequest) {
     if (answer) blocks.push({ type: 'text', text: answer });
   }
 
-  return blocks.length > 0 ? blocks : [{ type: 'text', text: stripThinkingTags(text) || text }];
+  return blocks.length > 0 ? blocks : [{ type: 'text', text: cleanTaggedAnswerText(text) || text }];
 }
 
 export function parseThinkingFromAnthropicResponse(responseData, originalRequest) {

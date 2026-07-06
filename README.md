@@ -6,10 +6,13 @@
 
 - `POST /v1/messages`
 - `POST /anthropic/v1/messages`
+- `GET /v1/models`
+- `GET /anthropic/v1/models`
 - `GET /health`
 - 将普通 Claude Messages 请求增强为 `<thinking>...</thinking><answer>...</answer>` 输出格式
-- 将上游文本里的 `<thinking>` 和 `<answer>` 拆成 Anthropic content blocks
+- 将上游文本里的 `<thinking>` 和 `<answer>` 拆成 Anthropic content blocks，普通文本响应不会泄漏 `<answer>` 标签
 - 支持请求级关闭和 Anthropic 原生 thinking 直通
+- 支持多个上游渠道顺序回退，Anthropic 与 OpenAI-compatible 渠道可混用
 
 ## 快速开始
 
@@ -41,7 +44,7 @@ docker run -d --name claude-thinking-proxy \
   claude-thinking-proxy:latest
 ```
 
-Compose 默认读取 `.env` 中的 `HOST_PORT`、`DEFAULT_UPSTREAM_URL`、`DEFAULT_API_KEY`、`DEFAULT_THINKING_ENABLED` 和 `DEFAULT_THINKING_BUDGET`。
+Compose 默认读取 `.env` 中的 `HOST_PORT`、上游渠道配置和 thinking 配置。
 
 ## 配置
 
@@ -53,11 +56,25 @@ HOST_PORT=8848
 NODE_ENV=production
 DEFAULT_UPSTREAM_URL=https://api.anthropic.com
 DEFAULT_API_KEY=
+
+# 可选：多渠道配置，优先级高于 DEFAULT_UPSTREAM_URL / DEFAULT_API_KEY
+UPSTREAMS_JSON=[{"name":"primary","type":"anthropic","baseUrl":"https://api.anthropic.com","apiKey":"sk-ant-..."},{"name":"backup","type":"openai","baseUrl":"https://api.openai.com","apiKey":"sk-...","model":"gpt-4o-mini"}]
 DEFAULT_THINKING_ENABLED=true
 DEFAULT_THINKING_BUDGET=5000
 ```
 
 也可以在请求中用 `x-api-key` 或 `Authorization: Bearer ...` 传入上游 Anthropic Key。请求头里的 Key 优先于 `DEFAULT_API_KEY`。
+
+### 多渠道
+
+最推荐用 `UPSTREAMS_JSON` 配置多个渠道。每个渠道支持：
+
+- `type`: `anthropic` 或 `openai`
+- `baseUrl`: 上游 API 根地址，可带或不带 `/v1`
+- `apiKey`: 该渠道固定 Key；为空时使用请求头 Key 或 `DEFAULT_API_KEY`
+- `model`: 可选模型覆盖，用于第二个 OpenAI-compatible 渠道把 Claude 请求转换到指定模型
+
+也可以用逗号分隔变量：`UPSTREAM_URLS`、`UPSTREAM_API_KEYS`、`UPSTREAM_TYPES`、`UPSTREAM_MODELS`。请求会按配置顺序尝试，遇到 401、403、404、429、5xx 或网络错误时回退到下一个渠道。`GET /v1/models` 会聚合所有可用渠道的模型列表。
 
 ## Thinking 开关
 

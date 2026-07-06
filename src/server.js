@@ -13,7 +13,7 @@ export function createApp() {
   app.get('/', (req, res) => {
     res.json({
       name: 'claude-thinking-proxy',
-      endpoints: ['/v1/messages', '/anthropic/v1/messages', '/health'],
+      endpoints: ['/v1/messages', '/anthropic/v1/messages', '/v1/models', '/anthropic/v1/models', '/health'],
     });
   });
 

@@ -1,6 +1,6 @@
 import express from 'express';
 
-import { executeJsonRequest, executeStreamRequest } from '../gateway/executor.js';
+import { executeJsonRequest, executeModelsRequest, executeStreamRequest } from '../gateway/executor.js';
 
 export const gatewayRouter = express.Router();
 
@@ -35,6 +35,18 @@ async function handleAnthropicMessages(req, res) {
 
 gatewayRouter.post('/v1/messages', handleAnthropicMessages);
 gatewayRouter.post('/anthropic/v1/messages', handleAnthropicMessages);
+
+async function handleAnthropicModels(req, res) {
+  try {
+    const data = await executeModelsRequest({ req });
+    res.json(data);
+  } catch (error) {
+    sendError(res, error);
+  }
+}
+
+gatewayRouter.get('/v1/models', handleAnthropicModels);
+gatewayRouter.get('/anthropic/v1/models', handleAnthropicModels);
 
 gatewayRouter.get('/health', (req, res) => {
   res.json({
