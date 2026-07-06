@@ -244,6 +244,22 @@ function createSseTagCleaner() {
   });
 }
 
+function writeSseError(res, error) {
+  if (res.writableEnded || res.destroyed) return;
+
+  const payload = {
+    type: 'error',
+    error: {
+      type: 'proxy_error',
+      message: error?.message || 'Upstream stream failed',
+    },
+  };
+
+  res.write(`event: error\n`);
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  res.end();
+}
+
 function shouldTryNext(error) {
   const status = error.response?.status || error.statusCode;
   return !status || status === 401 || status === 403 || status === 404 || status === 429 || status >= 500;
@@ -362,8 +378,15 @@ export async function executeStreamRequest({ req, res }) {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
-  response.data.pipe(createSseTagCleaner()).pipe(res);
-  response.data.on('error', () => {
-    if (!res.writableEnded) res.end();
+  const cleaner = createSseTagCleaner();
+  const finishWithError = (error) => writeSseError(res, error);
+
+  response.data.on('error', finishWithError);
+  cleaner.on('error', finishWithError);
+  res.on('close', () => {
+    response.data.destroy();
+    cleaner.destroy();
   });
+
+  response.data.pipe(cleaner).pipe(res);
 }

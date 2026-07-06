@@ -262,6 +262,40 @@ test('streaming responses do not leak answer tags', async () => {
   }
 });
 
+test('streaming upstream errors return stable json errors', async () => {
+  const mock = createMockAnthropic({ messagesStatus: 500 });
+  await listen(mock.server);
+  const app = await createTestApp([{ type: 'anthropic', baseUrl: `http://127.0.0.1:${mock.server.address().port}` }]);
+
+  try {
+    const response = await fetch(`${app.baseUrl}/v1/messages?beta=true`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': 'client-secret',
+      },
+      body: JSON.stringify({
+        model: 'claude-test',
+        stream: true,
+        messages: [{ role: 'user', content: 'stream failure' }],
+        max_tokens: 64,
+      }),
+    });
+
+    assert.equal(response.status, 500);
+    const body = await response.json();
+    assert.deepEqual(body, {
+      error: {
+        type: 'proxy_error',
+        message: 'messages failed',
+      },
+    });
+  } finally {
+    await close(app.server);
+    await close(mock.server);
+  }
+});
+
 test('models proxy aggregates anthropic and openai-compatible channels', async () => {
   const anthropic = createMockAnthropic();
   const openai = createMockOpenAI();
