@@ -1,0 +1,12 @@
+node_modules/
+npm-debug.log*
+.env
+.git/
+.github/
+data/
+logs/
+test/
+*.log
+.DS_Store
+.server-test.pid
+.tmp-*/

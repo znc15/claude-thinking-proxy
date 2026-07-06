@@ -1,0 +1,30 @@
+{
+  "name": "claude-thinking-proxy",
+  "version": "1.0.0",
+  "description": "Minimal Claude API proxy with thinking block extraction",
+  "main": "server.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test",
+    "ci": "npm test"
+  },
+  "keywords": [
+    "claude",
+    "anthropic",
+    "proxy",
+    "thinking",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  }
+}
